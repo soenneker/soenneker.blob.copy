@@ -7,7 +7,7 @@ namespace Soenneker.Blob.Copy.Registrars;
 /// <summary>
 /// A utility library for Azure Blob storage copy operations
 /// </summary>
-public static class BlobCopyRegistrar
+public static class BlobCopyUtilRegistrar
 {
     public static void AddBlobCopyAsSingleton(this IServiceCollection services)
     {
