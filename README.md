@@ -8,5 +8,5 @@
 ## Installation
 
 ```
-Install-Package Soenneker.Blob.Copy
+dotnet add package Soenneker.Blob.Copy
 ```
