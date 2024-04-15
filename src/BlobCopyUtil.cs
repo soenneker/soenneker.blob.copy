@@ -7,6 +7,8 @@ using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Sas;
 using Microsoft.Extensions.Logging;
 using Soenneker.Blob.Copy.Abstract;
+using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
 
 namespace Soenneker.Blob.Copy;
 
@@ -22,7 +24,7 @@ public class BlobCopyUtil : IBlobCopyUtil
 
     public async ValueTask<CopyFromUriOperation?> ServerSideBlobCopy(BlobClient source, BlobClient target)
     {
-        if (!await source.ExistsAsync())
+        if (!await source.ExistsAsync().NoSync())
         {
             _logger.LogError("*** Attempted to copy a blob that doesn't exist: {source} ***", source.Uri.AbsoluteUri);
             return null;
@@ -30,16 +32,16 @@ public class BlobCopyUtil : IBlobCopyUtil
 
         _logger.LogInformation("File transfer started: {source} to {target}", source.Uri, target.Uri);
 
-        if (!await target.GetParentBlobContainerClient().ExistsAsync())
+        if (!await target.GetParentBlobContainerClient().ExistsAsync().NoSync())
         {
             _logger.LogInformation("Creating container {container} because it doesn't exist", target.BlobContainerName);
-            await target.GetParentBlobContainerClient().CreateIfNotExistsAsync();
+            await target.GetParentBlobContainerClient().CreateIfNotExistsAsync().NoSync();
         }
 
         // Delete target if exists
-        if (await target.ExistsAsync())
+        if (await target.ExistsAsync().NoSync())
         {
-            if (!await ShouldCopy(source, target))
+            if (!await ShouldCopy(source, target).NoSync())
             {
                 _logger.LogInformation("Skipping copy from {source} to {target}.", source.Uri.AbsolutePath, target.Uri.AbsolutePath);
                 return null;
@@ -47,14 +49,14 @@ public class BlobCopyUtil : IBlobCopyUtil
 
             _logger.LogInformation("Deleting non-identical existing blob at target: {target}", target.Uri);
 
-            await target.DeleteAsync();
+            await target.DeleteAsync().NoSync();
         }
 
         Uri? sasUri = source.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(5));
 
-        CopyFromUriOperation result = await target.StartCopyFromUriAsync(sasUri);
+        CopyFromUriOperation result = await target.StartCopyFromUriAsync(sasUri).NoSync();
 
-        await GetBlobCopyStatus(target);
+        await GetBlobCopyStatus(target).NoSync();
 
         _logger.LogInformation("Success: File transfer operation for {source} to {target} completed!", source.Uri, target.Uri);
 
@@ -63,7 +65,7 @@ public class BlobCopyUtil : IBlobCopyUtil
 
     private async ValueTask GetBlobCopyStatus(BlobBaseClient blobClient)
     {
-        CopyStatus status = (await blobClient.GetPropertiesAsync()).Value.CopyStatus;
+        CopyStatus status = (await blobClient.GetPropertiesAsync().NoSync()).Value.CopyStatus;
 
         if (status == CopyStatus.Pending)
         {
@@ -80,7 +82,7 @@ public class BlobCopyUtil : IBlobCopyUtil
 
                 await Task.Delay(1000);
 
-                status = (await blobClient.GetPropertiesAsync()).Value.CopyStatus;
+                status = (await blobClient.GetPropertiesAsync().NoSync()).Value.CopyStatus;
 
                 _logger.LogDebug("Waiting on copy {uri} to finish...", blobClient.Uri);
             }
@@ -111,8 +113,8 @@ public class BlobCopyUtil : IBlobCopyUtil
         {
             try
             {
-                Response<BlobProperties>? blobAPropsTask = await blobA.GetPropertiesAsync();
-                Response<BlobProperties>? blobBPropsTask = await blobB.GetPropertiesAsync();
+                Response<BlobProperties>? blobAPropsTask = await blobA.GetPropertiesAsync().NoSync();
+                Response<BlobProperties>? blobBPropsTask = await blobB.GetPropertiesAsync().NoSync();
                 // TODO: pretty sure we can use task.whenall but being careful for now
 
                 return blobAPropsTask.Value.ContentHash == blobBPropsTask.Value.ContentHash;
