@@ -8,6 +8,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <None Remove="appsettings.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.8.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -17,8 +27,10 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Soenneker.Tests.Unit" Version="2.1.250" />
+        <PackageReference Include="Soenneker.Utils.Test" Version="2.1.208" />
+        <PackageReference Include="Soenneker.Tests.FixturedUnit" Version="2.1.761" />
     </ItemGroup>
+
 
     <ItemGroup>
         <ProjectReference Include="..\src\Soenneker.Blob.Copy.csproj" />
