@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
@@ -9,5 +10,5 @@ namespace Soenneker.Blob.Copy.Abstract;
 /// </summary>
 public interface IBlobCopyUtil
 {
-    ValueTask<CopyFromUriOperation?> ServerSideBlobCopy(BlobClient source, BlobClient target);
+    ValueTask<CopyFromUriOperation?> ServerSideBlobCopy(BlobClient source, BlobClient target, CancellationToken cancellationToken = default);
 }
