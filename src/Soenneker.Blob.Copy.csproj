@@ -39,7 +39,7 @@
         <PackageReference Include="Azure.Storage.Blobs" Version="12.20.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-        <PackageReference Include="Soenneker.Extensions.Task" Version="2.1.59" />
+        <PackageReference Include="Soenneker.Extensions.Task" Version="2.1.60" />
         <PackageReference Include="Soenneker.Extensions.ValueTask" Version="2.1.44" />
 
         
