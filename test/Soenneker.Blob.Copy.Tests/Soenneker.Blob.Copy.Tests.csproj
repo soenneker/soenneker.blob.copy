@@ -33,7 +33,7 @@
 
 
     <ItemGroup>
-        <ProjectReference Include="..\src\Soenneker.Blob.Copy.csproj" />
+        <ProjectReference Include="..\..\src\Soenneker.Blob.Copy.csproj" />
     </ItemGroup>
 
 </Project>
