@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using Soenneker.Blob.Copy.Abstract;
 using Soenneker.Tests.FixturedUnit;
 using Xunit;
