@@ -10,11 +10,12 @@ using Microsoft.Extensions.Logging;
 using Soenneker.Blob.Copy.Abstract;
 using Soenneker.Extensions.Task;
 using Soenneker.Extensions.ValueTask;
+using Soenneker.Utils.Delay;
 
 namespace Soenneker.Blob.Copy;
 
 ///<inheritdoc cref="IBlobCopyUtil"/>
-public class BlobCopyUtil : IBlobCopyUtil
+public sealed class BlobCopyUtil : IBlobCopyUtil
 {
     private readonly ILogger<BlobCopyUtil> _logger;
         
@@ -81,7 +82,7 @@ public class BlobCopyUtil : IBlobCopyUtil
                     throw new Exception($"Copy timed out {blobClient.Uri}, aborting wait");
                 }
 
-                await Task.Delay(1000, cancellationToken).NoSync();
+                await DelayUtil.Delay(1000, _logger, cancellationToken).NoSync();
 
                 status = (await blobClient.GetPropertiesAsync(cancellationToken: cancellationToken).NoSync()).Value.CopyStatus;
 
