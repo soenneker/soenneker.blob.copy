@@ -39,7 +39,7 @@
     </ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.25.1" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
 		<PackageReference Include="Soenneker.Extensions.Task" Version="3.0.105" />
 		<PackageReference Include="Soenneker.Extensions.ValueTask" Version="3.0.95" />
 		<PackageReference Include="Soenneker.Utils.Delay" Version="3.0.30" />
