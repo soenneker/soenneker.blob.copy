@@ -71,13 +71,13 @@ public sealed class BlobCopyUtil : IBlobCopyUtil
 
         if (status == CopyStatus.Pending)
         {
-            DateTime started = DateTime.UtcNow;
+            DateTimeOffset started = DateTimeOffset.UtcNow;
 
             TimeSpan fiveMin = TimeSpan.FromMinutes(5);
 
             while (status == CopyStatus.Pending)
             {
-                if (DateTime.UtcNow.Subtract(started) > fiveMin)
+                if (DateTimeOffset.UtcNow.Subtract(started) > fiveMin)
                 {
                     throw new Exception($"Copy timed out {blobClient.Uri}, aborting wait");
                 }
