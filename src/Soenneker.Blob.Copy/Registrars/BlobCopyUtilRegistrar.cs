@@ -9,6 +9,11 @@ namespace Soenneker.Blob.Copy.Registrars;
 /// </summary>
 public static class BlobCopyUtilRegistrar
 {
+    /// <summary>
+    /// Adds blob copy as singleton.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The result of the operation.</returns>
     public static IServiceCollection AddBlobCopyAsSingleton(this IServiceCollection services)
     {
         services.TryAddSingleton<IBlobCopyUtil, BlobCopyUtil>();
@@ -16,6 +21,11 @@ public static class BlobCopyUtilRegistrar
         return services;
     }
 
+    /// <summary>
+    /// Adds blob copy as scoped.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The result of the operation.</returns>
     public static IServiceCollection AddBlobCopyAsScoped(this IServiceCollection services)
     {
         services.TryAddScoped<IBlobCopyUtil, BlobCopyUtil>();
