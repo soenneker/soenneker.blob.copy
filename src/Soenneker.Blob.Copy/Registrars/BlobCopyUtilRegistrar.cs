@@ -10,10 +10,10 @@ namespace Soenneker.Blob.Copy.Registrars;
 public static class BlobCopyUtilRegistrar
 {
     /// <summary>
-    /// Adds blob copy as singleton.
+    /// Registers Blob Copy with a singleton lifetime.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddBlobCopyAsSingleton(this IServiceCollection services)
     {
         services.TryAddSingleton<IBlobCopyUtil, BlobCopyUtil>();
@@ -22,10 +22,10 @@ public static class BlobCopyUtilRegistrar
     }
 
     /// <summary>
-    /// Adds blob copy as scoped.
+    /// Registers Blob Copy with a scoped lifetime.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddBlobCopyAsScoped(this IServiceCollection services)
     {
         services.TryAddScoped<IBlobCopyUtil, BlobCopyUtil>();

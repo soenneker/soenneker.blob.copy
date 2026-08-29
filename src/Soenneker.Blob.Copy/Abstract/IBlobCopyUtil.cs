@@ -11,11 +11,11 @@ namespace Soenneker.Blob.Copy.Abstract;
 public interface IBlobCopyUtil
 {
     /// <summary>
-    /// Executes the server side blob copy operation.
+    /// Returns the value produced by server Side Blob Copy.
     /// </summary>
-    /// <param name="source">The source.</param>
-    /// <param name="target">The target.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task containing the result of the operation.</returns>
+    /// <param name="source">source to read or transform.</param>
+    /// <param name="target">Target for the server side blob copy operation.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A task whose result is the requested copy From URI Operation.</returns>
     ValueTask<CopyFromUriOperation?> ServerSideBlobCopy(BlobClient source, BlobClient target, CancellationToken cancellationToken = default);
 }
