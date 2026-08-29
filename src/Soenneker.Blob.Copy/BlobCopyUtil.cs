@@ -14,7 +14,7 @@ using Soenneker.Utils.Delay;
 
 namespace Soenneker.Blob.Copy;
 
-///<inheritdoc cref="IBlobCopyUtil"/>
+/// <inheritdoc cref="IBlobCopyUtil"/>
 public sealed class BlobCopyUtil : IBlobCopyUtil
 {
     private readonly ILogger<BlobCopyUtil> _logger;
