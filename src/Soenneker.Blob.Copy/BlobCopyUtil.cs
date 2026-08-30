@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -29,17 +30,16 @@ public sealed class BlobCopyUtil : IBlobCopyUtil
         if (!await source.ExistsAsync(cancellationToken)
                          .NoSync())
         {
-            _logger.LogError("*** Attempted to copy a blob that doesn't exist: {source} ***", source.Uri.AbsoluteUri);
+            _logger.LogError("Attempted to copy a blob that does not exist: {source}", GetSafeUri(source.Uri));
             return null;
         }
 
-        _logger.LogInformation("File transfer started: {source} to {target}", source.Uri, target.Uri);
+        _logger.LogInformation("File transfer started: {source} to {target}", GetSafeUri(source.Uri), GetSafeUri(target.Uri));
 
         if (!await target.GetParentBlobContainerClient()
                          .ExistsAsync(cancellationToken)
                          .NoSync())
         {
-            _logger.LogInformation("Creating container {container} because it doesn't exist", target.BlobContainerName);
             await target.GetParentBlobContainerClient()
                         .CreateIfNotExistsAsync(cancellationToken: cancellationToken)
                         .NoSync();
@@ -56,21 +56,19 @@ public sealed class BlobCopyUtil : IBlobCopyUtil
                 return null;
             }
 
-            _logger.LogInformation("Deleting non-identical existing blob at target: {target}", target.Uri);
-
-            await target.DeleteAsync(cancellationToken: cancellationToken)
-                        .NoSync();
         }
 
-        Uri? sasUri = source.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(5));
+        Uri sourceUri = source.CanGenerateSasUri
+            ? source.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1))
+            : source.Uri;
 
-        CopyFromUriOperation result = await target.StartCopyFromUriAsync(sasUri, cancellationToken: cancellationToken)
+        CopyFromUriOperation result = await target.StartCopyFromUriAsync(sourceUri, cancellationToken: cancellationToken)
                                                   .NoSync();
 
         await GetBlobCopyStatus(target, cancellationToken)
             .NoSync();
 
-        _logger.LogInformation("Success: File transfer operation for {source} to {target} completed!", source.Uri, target.Uri);
+        _logger.LogInformation("File transfer from {source} to {target} completed", GetSafeUri(source.Uri), GetSafeUri(target.Uri));
 
         return result;
     }
@@ -90,7 +88,7 @@ public sealed class BlobCopyUtil : IBlobCopyUtil
             {
                 if (DateTimeOffset.UtcNow.Subtract(started) > fiveMin)
                 {
-                    throw new Exception($"Copy timed out {blobClient.Uri}, aborting wait");
+                    throw new TimeoutException($"Timed out while waiting for the blob copy at {GetSafeUri(blobClient.Uri)}.");
                 }
 
                 await DelayUtil.Delay(1000, _logger, cancellationToken)
@@ -99,49 +97,50 @@ public sealed class BlobCopyUtil : IBlobCopyUtil
                 status = (await blobClient.GetPropertiesAsync(cancellationToken: cancellationToken)
                                           .NoSync()).Value.CopyStatus;
 
-                _logger.LogDebug("Waiting on copy {uri} to finish...", blobClient.Uri);
+                _logger.LogDebug("Waiting on copy {uri} to finish...", GetSafeUri(blobClient.Uri));
             }
         }
 
         if (status != CopyStatus.Success)
         {
-            throw new Exception($"Failed downloading blob at {blobClient.Uri}. Blob copy operation status {status}");
+            throw new InvalidOperationException($"Blob copy at {GetSafeUri(blobClient.Uri)} finished with status {status}.");
         }
     }
 
     /// <summary>
-    /// Determines if a server side copy should be performed based on criteria:
-    /// 1. If blob paths are EXACTLY the same, log error, do not copy
-    /// 2. If blob content is identical AND blobs are going to the same location (relative to storage account)
+    /// Determines whether a server-side copy would change the destination.
     /// </summary>
     private async ValueTask<bool> ShouldCopy(BlobBaseClient blobA, BlobBaseClient blobB, CancellationToken cancellationToken)
     {
-        // Check entire url
-        if (blobA.Uri.AbsoluteUri == blobB.Uri.AbsoluteUri)
+        if (string.Equals(blobA.Uri.Host, blobB.Uri.Host, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(blobA.Uri.AbsolutePath, blobB.Uri.AbsolutePath, StringComparison.Ordinal))
         {
-            _logger.LogError("WARNING Attempted to copy blob to same exact destination: {uri}", blobA.Uri.AbsoluteUri);
+            _logger.LogWarning("Skipping a copy whose source and destination are the same blob: {uri}", GetSafeUri(blobA.Uri));
             return false;
         }
 
-        // AbsolutePath is the part of the url after the storage account (i.e. "/container/blob")
-        if (blobA.Uri.AbsolutePath == blobB.Uri.AbsolutePath)
+        try
         {
-            try
-            {
-                Response<BlobProperties>? blobAPropsTask = await blobA.GetPropertiesAsync(cancellationToken: cancellationToken)
-                                                                      .NoSync();
-                Response<BlobProperties>? blobBPropsTask = await blobB.GetPropertiesAsync(cancellationToken: cancellationToken)
-                                                                      .NoSync();
-                // TODO: pretty sure we can use task.whenall but being careful for now
+            Response<BlobProperties> blobAProperties = await blobA.GetPropertiesAsync(cancellationToken: cancellationToken)
+                                                                 .NoSync();
+            Response<BlobProperties> blobBProperties = await blobB.GetPropertiesAsync(cancellationToken: cancellationToken)
+                                                                 .NoSync();
+            byte[]? sourceHash = blobAProperties.Value.ContentHash;
+            byte[]? targetHash = blobBProperties.Value.ContentHash;
 
-                return blobAPropsTask.Value.ContentHash == blobBPropsTask.Value.ContentHash;
-            }
-            catch (Exception e)
+            if (sourceHash is { Length: > 0 } && targetHash is { Length: > 0 } && sourceHash.SequenceEqual(targetHash))
             {
-                _logger.LogError(e, "Error getting properties from blobs");
+                _logger.LogInformation("Skipping copy because source and destination content hashes match");
+                return false;
             }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "Could not compare source and destination properties; the copy will proceed");
         }
 
         return true;
     }
+
+    private static string GetSafeUri(Uri uri) => uri.GetLeftPart(UriPartial.Path);
 }

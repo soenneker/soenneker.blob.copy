@@ -6,16 +6,16 @@ using Azure.Storage.Blobs.Models;
 namespace Soenneker.Blob.Copy.Abstract;
 
 /// <summary>
-/// A utility library for Azure Blob storage copy operations <para/>
+/// Performs Azure server-side blob copies and waits for their terminal status.
 /// </summary>
 public interface IBlobCopyUtil
 {
     /// <summary>
-    /// Returns the value produced by server Side Blob Copy.
+    /// Copies a source blob to a destination, skipping missing sources, identical content, and self-copies.
     /// </summary>
-    /// <param name="source">source to read or transform.</param>
-    /// <param name="target">Target for the server side blob copy operation.</param>
+    /// <param name="source">Source blob. It must carry a usable SAS URI or support generating one.</param>
+    /// <param name="target">Destination blob to create or replace.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A task whose result is the requested copy From URI Operation.</returns>
+    /// <returns>The completed copy operation, or <c>null</c> when no copy was needed.</returns>
     ValueTask<CopyFromUriOperation?> ServerSideBlobCopy(BlobClient source, BlobClient target, CancellationToken cancellationToken = default);
 }

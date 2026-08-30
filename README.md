@@ -5,7 +5,7 @@
 
 # Soenneker.Blob.Copy
 
-A utility library for Azure Blob storage copy operations.
+Starts an Azure server-side blob copy, waits for completion, and skips missing sources, self-copies, and destinations with the same content hash.
 
 ## Install
 
@@ -13,31 +13,54 @@ A utility library for Azure Blob storage copy operations.
 dotnet add package Soenneker.Blob.Copy
 ```
 
-## Quick start
+Register the stateless utility in `Program.cs`:
 
 ```csharp
 using Soenneker.Blob.Copy.Registrars;
-using Microsoft.Extensions.DependencyInjection;
 
-var services = new ServiceCollection();
-var result = services.AddBlobCopyAsSingleton();
+builder.Services.AddBlobCopyAsSingleton();
 ```
 
-Registers Blob Copy with a singleton lifetime.
+Scoped registration is also available.
 
-## What you get
+## Copy a blob
 
-- `IBlobCopyUtil` — A utility library for Azure Blob storage copy operations.
-- `BlobCopyUtilRegistrar` — A utility library for Azure Blob storage copy operations.
+```csharp
+using Azure.Storage.Blobs.Models;
+using Soenneker.Blob.Copy.Abstract;
 
-## API at a glance
+CopyFromUriOperation? operation = await blobCopy.ServerSideBlobCopy(
+    sourceBlob,
+    destinationBlob,
+    cancellationToken);
 
-| API | What it does | Result / important behavior |
-| --- | --- | --- |
-| `IBlobCopyUtil.ServerSideBlobCopy(source, target, cancellationToken)` | Returns the value produced by server Side Blob Copy. | A task whose result is the requested copy From URI Operation. |
-| `BlobCopyUtilRegistrar.AddBlobCopyAsSingleton(services)` | Registers Blob Copy with a singleton lifetime. | The same service collection, so additional registrations can be chained. |
-| `BlobCopyUtilRegistrar.AddBlobCopyAsScoped(services)` | Registers Blob Copy with a scoped lifetime. | The same service collection, so additional registrations can be chained. |
+if (operation is null)
+{
+    // The source was missing, the URIs targeted the same blob,
+    // or both blobs exposed the same non-empty content hash.
+}
+```
 
-## Practical notes
+The destination container is created privately if it does not exist. An existing destination blob is replaced by the Azure copy operation; it is not deleted first, so a failure to start the copy does not create an avoidable delete-before-copy gap.
+
+## Source authorization
+
+Azure Storage performs the transfer, so the service must be able to read the source URI:
+
+- If `source.CanGenerateSasUri` is true, the utility generates a read-only SAS valid for one hour.
+- Otherwise, the source URI is passed as-is. It must already contain usable authorization or identify a publicly readable blob.
+
+The source credential must also allow reading properties because the utility checks existence and may compare content hashes. The destination client must allow container creation, property reads, and blob writes.
+
+Full source and destination query strings are never written to this utility's logs, preventing SAS tokens from being exposed there.
+
+## Result and failure behavior
+
+- The returned `CopyFromUriOperation` has reached a terminal status when the method returns.
+- A missing source or skipped copy returns `null`; it is not treated as an exception.
+- Matching content is skipped only when both blobs expose non-empty content hashes. If hashes are absent or properties cannot be compared, the copy proceeds.
+- The utility polls for up to five minutes. A timeout stops waiting but does not guarantee Azure stopped the server-side copy.
+- A non-success Azure copy status throws `InvalidOperationException`; Azure request failures propagate as `RequestFailedException`.
 
 - Cancellation stops pending work; it does not undo work that has already completed.
+- Cancellation after Azure accepts the copy may leave a server-side operation running. Inspect or abort the destination copy explicitly when that distinction matters.
