@@ -47,6 +47,6 @@
         <PackageReference Include="Azure.Storage.Blobs" Version="12.30.1" />
         <PackageReference Include="Soenneker.Extensions.Task" Version="11.0.143" />
         <PackageReference Include="Soenneker.Extensions.ValueTask" Version="11.0.137" />
-        <PackageReference Include="Soenneker.Utils.Delay" Version="11.0.110" />
+        <PackageReference Include="Soenneker.Utils.Delay" Version="11.0.111" />
     </ItemGroup>
 </Project>
